@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+
+  <title>Real-time news watcher</title>
+  <script src="https://js.pusher.com/4.1/pusher.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+  <script type="text/babel">
+// The script loads the news from the server,
+// then lists for pushed news
+
+var hrefs = {};
+var news = [];
+
+/* -- Load first -- */
+var xmlhttp = new XMLHttpRequest();
+
+xmlhttp.onreadystatechange = function() {
+  if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+    if (xmlhttp.status == 200) {
+      var pulled = JSON.parse(xmlhttp.responseText);
+      for (var article of pulled) {
+        news.push(article);
+      }
+      render(news);
+    } else {
+      console.log('Not 200 OK :- /');
+    }
+  }
+};
+
+xmlhttp.open("GET", "http://localhost:8080", true);
+xmlhttp.send();
+
+/* -- Receive new items when pushed from the server -- */
+
+// Enable pusher logging - don't include this in production
+Pusher.logToConsole = true;
+
+var pusher = new Pusher('72ed67a3f5a9fac9fc77', {
+  cluster: 'eu',
+  encrypted: true
+});
+
+var channel = pusher.subscribe('my-channel');
+channel.bind('my-event', function(article) {
+  // Add the new article
+  if (!(article.href in hrefs)) {
+    article.timestamp = Date.now();
+    news.push(article);
+    hrefs[article.href] = true;
+
+    // Remove those older than 5 minutes
+    var fiveMinutesAgo = new Date(Date.now() - 5*60*1000);
+    news = news.filter(function(article) {
+      return article.timestamp > fiveMinutesAgo;
+    });
+
+    render(news);
+  }
+});
+
+/* -- Render stuff -- */
+function render(news) {
+  // Prepare elements
+  function ListArticle(article) {
+    return (
+      <li key={article.href} className='animated fadeIn'>
+        <a href={article.href}>{article.text}</a>
+      </li>
+      )
+  }
+
+  var rows = [];
+  for (var article of news) {
+      rows.push(ListArticle(article));
+  }
+
+  ReactDOM.render(
+    <ul>{rows}</ul>,
+    document.getElementById('news-list')
+  );
+}
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
+  <style>
+    .container {
+      width: 760px;
+      margin: 0 auto;
+    }
+
+    a {
+      font-size: 18px;
+        -webkit-animation: fadein 1s;
+                animation: fadein 1s;
+    }
+
+    @keyframes fadein {
+        from { opacity: 0; background-color: #1976D2; }
+        to   { opacity: 1; background-color: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Real-time news watcher</h1>
+
+    <p>Showing news about selected phrases on the BBC homepage.</p>
+
+    <div id="news-list"></div>
+  </div>
+</body>
+</html>

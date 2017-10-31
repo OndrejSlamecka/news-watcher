@@ -1,0 +1,17 @@
+# Delay between scans of pages, in seconds
+delay: 30
+
+# Web to search
+url: 'http://www.bbc.com/'
+
+# Phrase to search for
+phrase: 'Facebook'
+
+# Remove older news, in seconds
+age_limit: 3600
+
+pusher:
+    app_id:
+    key:
+    secret:
+    cluster: eu
